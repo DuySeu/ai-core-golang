@@ -5,26 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
-	"os/signal"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v3"
 
-	core "github.com/duyseu/llm-core/internal/llm"
-	"github.com/duyseu/llm-core/internal/llm/prompts"
-	"github.com/duyseu/llm-core/internal/llm/providers"
-	"github.com/duyseu/llm-core/internal/llm/tools"
-	"github.com/duyseu/llm-core/internal/mcp"
-	"github.com/duyseu/llm-core/internal/server"
+	core "ai-core-golang/internal/llm"
+	"ai-core-golang/internal/llm/prompts"
+	"ai-core-golang/internal/llm/providers"
+	"ai-core-golang/internal/llm/tools"
+	"ai-core-golang/internal/mcp"
 )
 
 func main() {
@@ -37,23 +31,6 @@ func main() {
 		Usage:   "LLM Core Toolkit CLI",
 		Version: "1.0.0",
 		Commands: []*cli.Command{
-			{
-				Name:  "server",
-				Usage: "Run the LLM Core API server",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "port",
-						Value: "8080",
-						Usage: "Port to run the server on",
-					},
-					&cli.StringFlag{
-						Name:  "mcp",
-						Value: "",
-						Usage: "Optional stdio MCP: extra args for this binary (e.g. mcp-search). Empty = no MCP subprocess",
-					},
-				},
-				Action: runServerCmd,
-			},
 			{
 				Name:   "chat",
 				Usage:  "Run the console streaming demo",
@@ -115,60 +92,7 @@ func streamPrintStdout(s string) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 1. Server Command
-// ──────────────────────────────────────────────────────────────────────────────
-
-func runServerCmd(ctx context.Context, cmd *cli.Command) error {
-	port := cmd.String("port")
-
-	// Create dependencies
-	dbPool, err := pgxpool.New(ctx, mustEnv("POSTGRES_URL"))
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer dbPool.Close()
-
-	if err := dbPool.Ping(ctx); err != nil {
-		return fmt.Errorf("database ping failed: %w", err)
-	}
-	log.Printf("Database: OK (pool ping succeeded)")
-
-	cfg := providers.LoadConfig()
-
-	llmSvc, err := core.NewLLMService(ctx, cfg.LLM, nil)
-	if err != nil {
-		return fmt.Errorf("failed to initialize LLM service: %w", err)
-	}
-	streamMgr := server.NewStreamManager()
-
-	srv := server.NewServer(dbPool, llmSvc, streamMgr, port)
-
-	ln, err := net.Listen("tcp", srv.Addr)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", srv.Addr, err)
-	}
-	log.Printf("Server ready; listening on %s", ln.Addr())
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
-		}
-	}()
-
-	<-quit
-	log.Println("Shutting down server...")
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	return srv.Shutdown(shutdownCtx)
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 2. Demo Command
+// 1. Demo Command
 // ──────────────────────────────────────────────────────────────────────────────
 
 func runChatCmd(ctx context.Context, cmd *cli.Command) error {
@@ -279,7 +203,7 @@ func runChatCmd(ctx context.Context, cmd *cli.Command) error {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 3. Summarize Command
+// 2. Summarize Command
 // ──────────────────────────────────────────────────────────────────────────────
 
 func runSummarizeCmd(ctx context.Context, cmd *cli.Command) error {

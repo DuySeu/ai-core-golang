@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/duyseu/llm-core/internal/llm/tools"
+	"ai-core-golang/internal/llm/tools"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/bedrock"

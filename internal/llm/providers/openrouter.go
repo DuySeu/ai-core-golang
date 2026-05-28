@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/duyseu/llm-core/internal/llm/tools"
+	"ai-core-golang/internal/llm/tools"
 
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"

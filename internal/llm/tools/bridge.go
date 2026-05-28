@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/duyseu/llm-core/internal/mcp"
+	"ai-core-golang/internal/mcp"
 )
 
 // BridgeMCPTools queries all configured MCP servers, lists their tools, and

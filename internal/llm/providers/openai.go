@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/duyseu/llm-core/internal/llm/tools"
+	"ai-core-golang/internal/llm/tools"
 
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"

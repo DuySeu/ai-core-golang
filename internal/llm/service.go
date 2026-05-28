@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/duyseu/llm-core/internal/llm/providers"
-	"github.com/duyseu/llm-core/internal/llm/tools"
+	"ai-core-golang/internal/llm/providers"
+	"ai-core-golang/internal/llm/tools"
 )
 
 type completionFunc func(context.Context, []providers.Message, []*tools.Tool, string) (<-chan providers.StreamEvent, error)

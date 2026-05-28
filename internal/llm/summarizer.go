@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/duyseu/llm-core/internal/llm/prompts"
-	"github.com/duyseu/llm-core/internal/llm/providers"
+	"ai-core-golang/internal/llm/prompts"
+	"ai-core-golang/internal/llm/providers"
 )
 
 const SummarizationThreshold int64 = 6

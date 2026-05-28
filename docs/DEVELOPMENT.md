@@ -12,7 +12,7 @@
 ### 1. Clone and install dependencies
 
 ```bash
-git clone https://github.com/duyseu/llm-core.git
+git clone https://ai-core-golang.git
 cd llm-core
 go mod download
 ```
