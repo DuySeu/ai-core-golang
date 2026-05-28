@@ -1,0 +1,9 @@
+Do a comprehensive stock analysis for {{.Ticker}} as of {{.Date}} in VietNam stock market:
+- Current stock price and recent price performance
+- Market capitalization and key financial metrics
+- Latest earnings results and guidance
+- Recent news and developments
+- Analyst ratings, upgrades/downgrades, and price targets
+- Key risks and opportunities
+- Investment recommendation with reasoning
+Focus on all the recent updates about the company.

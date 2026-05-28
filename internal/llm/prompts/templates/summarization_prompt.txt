@@ -1,0 +1,16 @@
+You are a conversation summarizer. Given the conversation below, produce two outputs:
+
+1. SUMMARY: A concise context paragraph (under 500 words) capturing the narrative flow, topics discussed, and conclusions reached.
+2. KEY FACTS: A bullet list of discrete important facts. Include: user preferences, decisions made, specific data points, stock symbols discussed, analysis results, and action items. Merge with existing key facts — update changed ones, remove obsolete ones, keep still-relevant ones.
+
+Previous summary (if any):
+{{.Summary}}
+
+Existing key facts (if any):
+{{.KeyFacts}}
+
+New messages to incorporate:
+{{.Messages}}
+
+Respond in this exact JSON format:
+{"summary": "...", "key_facts": ["fact 1", "fact 2"]}

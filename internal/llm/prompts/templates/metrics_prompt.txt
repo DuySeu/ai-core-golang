@@ -1,0 +1,8 @@
+Extract financial metrics for {{.Ticker}} from the following information:
+
+{{.Content}}
+
+Extract these metrics if available (set to None if unavailable):
+- Sharpe ratio, Annualized CAGR, Max drawdown
+- Latest open/close prices, Current price, Trading volume
+- 2-year price high and low
