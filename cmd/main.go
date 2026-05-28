@@ -50,52 +50,35 @@ func main() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────────
-
-func mustEnv(key string) string {
-	v := os.Getenv(key)
-	if v == "" {
-		log.Fatalf("environment variable %s is not set", key)
-	}
-	return v
-}
-
-// consoleStreamChunkRunes is how many Unicode code points we print per write
-// when streaming MCP tool I/O to the terminal (helps line-buffered consoles).
-const consoleStreamChunkRunes = 48
-
-// streamPrintStdout writes s in small UTF-8-safe chunks and flushes stdout
-// after each chunk so tool output appears progressively in the console.
-func streamPrintStdout(s string) {
-	if s == "" {
-		return
-	}
-	rest := s
-	for len(rest) > 0 {
-		i, n := 0, 0
-		for n < consoleStreamChunkRunes && i < len(rest) {
-			_, sz := utf8.DecodeRuneInString(rest[i:])
-			if sz == 0 {
-				break
-			}
-			i += sz
-			n++
-		}
-		if i == 0 {
-			break
-		}
-		fmt.Print(rest[:i])
-		rest = rest[i:]
-		_ = os.Stdout.Sync()
-	}
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // 1. Demo Command
 // ──────────────────────────────────────────────────────────────────────────────
 
 func runChatCmd(ctx context.Context, cmd *cli.Command) error {
+	// streamPrint writes s in small UTF-8-safe chunks and flushes stdout
+	// after each chunk so output appears progressively in the console.
+	streamPrint := func(s string) {
+		if s == "" {
+			return
+		}
+		rest := s
+		for len(rest) > 0 {
+			i, n := 0, 0
+			for n < 48 && i < len(rest) {
+				_, sz := utf8.DecodeRuneInString(rest[i:])
+				if sz == 0 {
+					break
+				}
+				i += sz
+				n++
+			}
+			if i == 0 {
+				break
+			}
+			fmt.Print(rest[:i])
+			rest = rest[i:]
+			_ = os.Stdout.Sync()
+		}
+	}
 	// In real use, you'd spawn the actual compiled binary.
 	// For this demo context, we'll spawn ourselves with the "mcp-search" command.
 
@@ -180,18 +163,18 @@ func runChatCmd(ctx context.Context, cmd *cli.Command) error {
 			tc := event.Data.(providers.Tool)
 			fmt.Printf("\n[🔧 Calling Tool: %s]\n", tc.Name)
 			fmt.Print("    args: ")
-			streamPrintStdout(tc.Arguments)
+			streamPrint(tc.Arguments)
 			fmt.Println()
 		case providers.EventToolResult:
 			tr := event.Data.(providers.Tool)
 			if tr.IsError == "true" {
 				fmt.Print("\n[❌ Tool error] ")
-				streamPrintStdout(tr.Output)
+				streamPrint(tr.Output)
 				fmt.Println()
 				continue
 			}
 			fmt.Print("\n[✅ Tool Result] ")
-			streamPrintStdout(tr.Output)
+			streamPrint(tr.Output)
 			fmt.Println()
 		case providers.EventError:
 			fmt.Printf("\n[❌ Error: %v]\n", event.Data)
