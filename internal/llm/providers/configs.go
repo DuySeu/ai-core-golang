@@ -70,16 +70,16 @@ type AWSCredentialConfig struct {
 	RoleSessionName string `json:"roleSessionName,omitempty" yaml:"roleSessionName,omitempty"` // optional
 }
 
-func LoadConfig() Config {
+func LoadServerConfig() Config {
 	return Config{
-		Database: Database{
-			Host:     os.Getenv("DB_HOST"),
-			Port:     getEnvInt("DB_PORT", 5432),
-			User:     os.Getenv("DB_USERNAME"),
-			Password: os.Getenv("DB_PASSWORD"),
-			Dbname:   os.Getenv("DB_DATABASE"),
-			SSLMode:  os.Getenv("DB_SSLMODE"),
-		},
+		// Database: Database{
+		// 	Host:     os.Getenv("DB_HOST"),
+		// 	Port:     getEnvInt("DB_PORT", 5432),
+		// 	User:     os.Getenv("DB_USERNAME"),
+		// 	Password: os.Getenv("DB_PASSWORD"),
+		// 	Dbname:   os.Getenv("DB_DATABASE"),
+		// 	SSLMode:  os.Getenv("DB_SSLMODE"),
+		// },
 		Qdrant: Qdrant{
 			Host:       os.Getenv("QDRANT_HOST"),
 			Port:       getEnvInt("QDRANT_PORT", 6334),
@@ -87,13 +87,13 @@ func LoadConfig() Config {
 			Collection: os.Getenv("QDRANT_COLLECTION"),
 			UseHTTPS:   os.Getenv("QDRANT_USE_HTTPS") == "true",
 		},
-		MinIO: MinIO{
-			Endpoint:  os.Getenv("MINIO_ENDPOINT"),
-			AccessKey: os.Getenv("MINIO_ACCESS_KEY"),
-			SecretKey: os.Getenv("MINIO_SECRET_KEY"),
-			Bucket:    os.Getenv("MINIO_BUCKET"),
-			SSLMode:   os.Getenv("MINIO_SSLMODE") == "true",
-		},
+		// MinIO: MinIO{
+		// 	Endpoint:  os.Getenv("MINIO_ENDPOINT"),
+		// 	AccessKey: os.Getenv("MINIO_ACCESS_KEY"),
+		// 	SecretKey: os.Getenv("MINIO_SECRET_KEY"),
+		// 	Bucket:    os.Getenv("MINIO_BUCKET"),
+		// 	SSLMode:   os.Getenv("MINIO_SSLMODE") == "true",
+		// },
 		LLM: LLM{
 			OpenAI: OpenAI{
 				APIKey:  os.Getenv("OPENROUTER_API_KEY"),
@@ -117,6 +117,23 @@ func LoadConfig() Config {
 			// 		RoleSessionName: "llm-test-session",
 			// 	},
 			// },
+		},
+	}
+}
+
+func LoadLLMConfig() LLM {
+	return LLM{
+		OpenAI: OpenAI{
+			APIKey:  os.Getenv("OPENROUTER_API_KEY"),
+			BaseURL: "https://openrouter.ai/api/v1",
+		},
+		Anthropic: Anthropic{
+			BaseURL: "https://openrouter.ai/api",
+			APIKey:  os.Getenv("OPENROUTER_API_KEY"),
+		},
+		OpenRouter: OpenRouter{
+			APIKey:  os.Getenv("OPENROUTER_API_KEY"),
+			BaseURL: "https://openrouter.ai/api/v1",
 		},
 	}
 }

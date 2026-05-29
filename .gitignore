@@ -2,3 +2,4 @@ main
 .env
 .kiro
 .cursor
+chunking.json

@@ -19,6 +19,7 @@ import (
 	"ai-core-golang/internal/llm/providers"
 	"ai-core-golang/internal/llm/tools"
 	"ai-core-golang/internal/mcp"
+	"ai-core-golang/internal/rag"
 )
 
 func main() {
@@ -40,6 +41,29 @@ func main() {
 				Name:   "summarize",
 				Usage:  "Run the summarize command",
 				Action: runSummarizeCmd,
+			},
+			{
+				Name:   "ingest",
+				Usage:  "Ingest knowledge_base/ documents into Qdrant",
+				Action: runIngestCmd,
+			},
+			{
+				Name:   "chunking",
+				Usage:  "Chunk knowledge_base/ documents and write to chunking.json",
+				Action: runChunkingCmd,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "strategy",
+						Usage: "Chunking strategy: markdown or semantic",
+						Value: "markdown",
+					},
+				},
+			},
+			{
+				Name:      "search",
+				Usage:     "Search the knowledge base directly",
+				ArgsUsage: "<query>",
+				Action:    runSearchCmd,
 			},
 		},
 	}
@@ -79,11 +103,6 @@ func runChatCmd(ctx context.Context, cmd *cli.Command) error {
 			_ = os.Stdout.Sync()
 		}
 	}
-	// In real use, you'd spawn the actual compiled binary.
-	// For this demo context, we'll spawn ourselves with the "mcp-search" command.
-
-	// Build LLM Core Service dependencies
-	cfg := providers.LoadConfig()
 
 	// Initialize MCP client manager and dynamically bridge MCP tools
 	var mcpManager *mcp.Manager
@@ -122,12 +141,22 @@ func runChatCmd(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Initialize tools and LLM service
-	toolDefs := tools.RegisterTools()
+	cfg := providers.LoadServerConfig()
+	embedder := rag.NewEmbedderWithClient(providers.SharedHTTPClient)
+	qdrantClient := rag.NewQdrantClientWithHTTP(rag.QdrantConfig{
+		Host:       cfg.Qdrant.Host,
+		Port:       cfg.Qdrant.Port,
+		APIKey:     cfg.Qdrant.APIKey,
+		Collection: cfg.Qdrant.Collection,
+		UseHTTPS:   cfg.Qdrant.UseHTTPS,
+	}, providers.SharedHTTPClient)
+	ragTool := tools.NewSearchKnowledgeBaseTool(embedder, qdrantClient)
+
+	toolDefs := tools.RegisterTools(ragTool)
 	if len(bridgedMCPTools) > 0 {
 		toolDefs = append(toolDefs, bridgedMCPTools...)
 	}
 	toolMgr := tools.NewManager(toolDefs)
-
 	svc, err := core.NewLLMService(ctx, cfg.LLM, toolMgr)
 	if err != nil {
 		return fmt.Errorf("failed to initialize LLM service: %w", err)
@@ -191,7 +220,7 @@ func runChatCmd(ctx context.Context, cmd *cli.Command) error {
 
 func runSummarizeCmd(ctx context.Context, cmd *cli.Command) error {
 	// Build LLM Core Service dependencies
-	cfg := providers.LoadConfig()
+	cfg := providers.LoadServerConfig()
 
 	// Initialize tools and LLM service
 	toolDefs := tools.RegisterTools()
@@ -233,5 +262,101 @@ func runSummarizeCmd(ctx context.Context, cmd *cli.Command) error {
 	}
 	out, _ := json.MarshalIndent(summarizeResult, "", "  ")
 	fmt.Println(string(out))
+	return nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 3. Ingest Command
+// ──────────────────────────────────────────────────────────────────────────────
+
+func runIngestCmd(ctx context.Context, cmd *cli.Command) error {
+	cfg := providers.LoadServerConfig()
+	embedder := rag.NewEmbedderWithClient(providers.SharedHTTPClient)
+	qdrantClient := rag.NewQdrantClientWithHTTP(rag.QdrantConfig{
+		Host:       cfg.Qdrant.Host,
+		Port:       cfg.Qdrant.Port,
+		APIKey:     cfg.Qdrant.APIKey,
+		Collection: cfg.Qdrant.Collection,
+		UseHTTPS:   cfg.Qdrant.UseHTTPS,
+	}, providers.SharedHTTPClient)
+
+	files, chunks, err := rag.Ingest(ctx, embedder, qdrantClient)
+	if err != nil {
+		return fmt.Errorf("ingest failed: %w", err)
+	}
+	fmt.Printf("---\nIngested %d files, %d vectors stored in Qdrant.\n", files, chunks)
+	return nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 4. Chunking Command
+// ──────────────────────────────────────────────────────────────────────────────
+
+func runChunkingCmd(ctx context.Context, cmd *cli.Command) error {
+	strategyName := cmd.String("strategy")
+	embedder := rag.NewEmbedder()
+	chunker, err := rag.GetChunker(strategyName, embedder)
+	if err != nil {
+		return err
+	}
+
+	chunks, err := rag.ChunkKnowledgeBase(ctx, chunker)
+	if err != nil {
+		return fmt.Errorf("chunking failed: %w", err)
+	}
+	out, err := json.MarshalIndent(chunks, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile("chunking.json", out, 0644); err != nil {
+		return fmt.Errorf("write chunking.json: %w", err)
+	}
+	fmt.Printf("Strategy: %s | Wrote %d chunks to chunking.json\n", strategyName, len(chunks))
+	return nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 5. Search Command
+// ──────────────────────────────────────────────────────────────────────────────
+
+func runSearchCmd(ctx context.Context, cmd *cli.Command) error {
+	query := cmd.Args().First()
+	if query == "" {
+		return fmt.Errorf("usage: llm-core search <query>")
+	}
+
+	cfg := providers.LoadServerConfig()
+	embedder := rag.NewEmbedderWithClient(providers.SharedHTTPClient)
+	qdrantClient := rag.NewQdrantClientWithHTTP(rag.QdrantConfig{
+		Host:       cfg.Qdrant.Host,
+		Port:       cfg.Qdrant.Port,
+		APIKey:     cfg.Qdrant.APIKey,
+		Collection: cfg.Qdrant.Collection,
+		UseHTTPS:   cfg.Qdrant.UseHTTPS,
+	}, providers.SharedHTTPClient)
+
+	vecs, err := embedder.Embed(ctx, []string{query})
+	if err != nil {
+		return fmt.Errorf("embed query: %w", err)
+	}
+
+	results, err := qdrantClient.Search(ctx, vecs[0], 5, 0.7)
+	if err != nil {
+		return fmt.Errorf("search: %w", err)
+	}
+	if len(results) == 0 {
+		fmt.Printf("No relevant documents found for: %q\n", query)
+		return nil
+	}
+
+	for _, r := range results {
+		fmt.Printf("[%.2f] %s > %s\n", r.Score, r.Payload["source_file"], r.Payload["heading_path"])
+		// Print first 200 chars of content as preview
+		content := r.Payload["content"]
+		if len(content) > 200 {
+			content = content[:200] + "..."
+		}
+		fmt.Printf("  %s\n\n", content)
+	}
 	return nil
 }
